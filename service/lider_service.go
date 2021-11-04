@@ -63,6 +63,17 @@ func (server *LiderServer) IniciarEtapa(req *pb.SolicitarInicioJuego, stream pb.
 	for server.cantidadJugadores < server.TotalPlayers {
 		time.Sleep(1 * time.Second)
 	}
+	for server.cantidadJugadores < 16 {
+
+		jugador := &pb.Jugador{
+			Id:   server.cantidadJugadores + 1,
+			Bot:  true,
+			Vive: true,
+		}
+		server.savedJugadores[server.cantidadJugadores] = jugador
+		server.cantidadJugadores = server.cantidadJugadores + 1
+
+	}
 	if err := stream.Send(&pb.EsperandoJugadores{
 		Message: "Se han completado los jugadores",
 	}); err != nil {
@@ -70,6 +81,10 @@ func (server *LiderServer) IniciarEtapa(req *pb.SolicitarInicioJuego, stream pb.
 	}
 
 	return nil
+}
+
+func CreateBots() {
+
 }
 
 func main() {
