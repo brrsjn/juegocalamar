@@ -36,6 +36,12 @@ const (
 	defaultBot = true
 )
 
+type Jugada struct {
+	Jugador *pb.Jugador
+	mensaje string
+	etapa   int32
+}
+
 func EsperarLider(client pb.JugadorLiderServiceClient, id int32) {
 	stream, err := client.IniciarEtapa(context.TODO(), &pb.SolicitarInicioJuego{
 		Id: id,
@@ -53,7 +59,7 @@ func EsperarLider(client pb.JugadorLiderServiceClient, id int32) {
 		}
 		log.Printf("%s", message.Message)
 	}
-	log.Printf("Terminó")
+	log.Printf("Listos Para jugar")
 }
 
 func main() {

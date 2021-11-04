@@ -25,3 +25,7 @@ service JugadorLiderService {
 
     rpc IniciarEtapa(SolicitarInicioJuego) returns (stream EsperandoJugadores) {};
 }
+
+message JugadaEtapa1 {
+    int32 step =1;
+}
