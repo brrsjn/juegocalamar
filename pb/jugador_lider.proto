@@ -12,6 +12,16 @@ message InscripcionJugador {
     bool bot = 1;
 }
 
+message SolicitarInicioJuego {
+    int32 id = 1;
+}
+
+message EsperandoJugadores {
+    string message = 1;
+}
+
 service JugadorLiderService {
     rpc SolicitarUnirce(InscripcionJugador) returns (Jugador) {};
+
+    rpc IniciarEtapa(SolicitarInicioJuego) returns (stream EsperandoJugadores) {};
 }

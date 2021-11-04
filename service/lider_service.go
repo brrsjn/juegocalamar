@@ -5,6 +5,7 @@ import (
 	"juegocalamar/pb"
 	"log"
 	"net"
+	"time"
 
 	"google.golang.org/grpc"
 )
@@ -41,6 +42,19 @@ func (server *LiderServer) SolicitarUnirce(ctx context.Context, req *pb.Inscripc
 	server.savedJugadores[server.cantidadJugadores] = jugador
 	server.cantidadJugadores = server.cantidadJugadores + 1
 	return jugador, nil
+}
+
+func (server *LiderServer) IniciarEtapa(req *pb.SolicitarInicioJuego, stream pb.JugadorLiderService_IniciarEtapaServer) error {
+	for server.cantidadJugadores < 16 {
+		time.Sleep(1 * time.Second)
+	}
+	if err := stream.Send(&pb.EsperandoJugadores{
+		Message: "Se han completado los jugadores",
+	}); err != nil {
+		return err
+	}
+	log.Printf("Iniciar etapa listo")
+	return nil
 }
 
 func main() {

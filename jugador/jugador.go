@@ -21,6 +21,7 @@ package main
 
 import (
 	"context"
+	"io"
 	"log"
 	"os"
 	"time"
@@ -34,6 +35,26 @@ const (
 	address    = "localhost:50051"
 	defaultBot = true
 )
+
+func EsperarLider(client pb.JugadorLiderServiceClient, id int32) {
+	stream, err := client.IniciarEtapa(context.TODO(), &pb.SolicitarInicioJuego{
+		Id: id,
+	})
+	if err != nil {
+		log.Fatalf("%v.ListFeatures(_) = _, %v", client, err)
+	}
+	for {
+		message, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatalf("%v.ListFeatures(_) = _, %v", client, err)
+		}
+		log.Printf("%s", message.Message)
+	}
+	log.Printf("Terminó")
+}
 
 func main() {
 	// Set up a connection to the server.
@@ -58,4 +79,5 @@ func main() {
 		log.Fatalf("could not greet: %v", err)
 	}
 	log.Printf("Tu identificador es: %d", r.GetId())
+	EsperarLider(c, r.GetId())
 }
