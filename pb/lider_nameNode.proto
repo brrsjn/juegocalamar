@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+option go_package = "/pb";
+
+
+message Jugada {
+    int32 id = 1;
+    int32 jugadorId = 2;
+    int32 move = 3;
+    int32 ronda = 4;
+    int32 etapa = 5;
+}
+
+message Response {
+    bool state = 1;
+}
+
+message Etapa {
+    int32 etapa = 1;
+    int32 ronda = 2;
+}
+
+
+service LiderNameNodeService {
+    rpc GuardarJugada (Jugada) returns (Response) {};
+    rpc ResultadoJugadasStageOne (Jugada) returns (Response) {};
+}
+

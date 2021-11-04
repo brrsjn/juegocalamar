@@ -22,6 +22,9 @@ type LiderServer struct {
 	deadJugadores     [16]*pb.Jugador
 	cantidadJugadores int32
 	TotalPlayers      int32
+	stageOneReady     bool
+	stageTwoReady     bool
+	stageThree        bool
 }
 
 func viveJugador(lider int, jugador int) bool {
@@ -68,7 +71,13 @@ func (server *LiderServer) IniciarEtapa(req *pb.SolicitarInicioJuego, stream pb.
 	}); err != nil {
 		return err
 	}
-
+	log.Printf("Inicio de etapa 1")
+	//logica de inicio de etapa
+	if err := stream.Send(&pb.EsperandoJugadores{
+		Message: "Se dará inicio a la primera etapa \n",
+	}); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -89,7 +98,7 @@ func main() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
-	pb.RegisterJugadorLiderServiceServer(s, &LiderServer{cantidadJugadores: 0, TotalPlayers: int32(playersNo)})
+	pb.RegisterJugadorLiderServiceServer(s, &LiderServer{cantidadJugadores: 0, TotalPlayers: int32(playersNo), stageOneReady: false})
 	reflection.Register(s)
 	log.Printf("server listening at %v", lis.Addr())
 	if err := s.Serve(lis); err != nil {
