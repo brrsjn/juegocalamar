@@ -37,15 +37,26 @@ func NewLiderServer() *LiderServer {
 }
 
 func (server *LiderServer) SolicitarUnirce(ctx context.Context, req *pb.InscripcionJugador) (*pb.Jugador, error) {
-	log.Printf("Received bot: %v", req.GetBot())
-	jugador := &pb.Jugador{
-		Id:   server.cantidadJugadores,
-		Bot:  req.GetBot(),
-		Vive: true,
+	if server.cantidadJugadores < server.TotalPlayers {
+		log.Printf("Received bot: %v", req.GetBot())
+		jugador := &pb.Jugador{
+			Id:   server.cantidadJugadores + 1,
+			Bot:  req.GetBot(),
+			Vive: true,
+		}
+
+		server.savedJugadores[server.cantidadJugadores] = jugador
+		server.cantidadJugadores = server.cantidadJugadores + 1
+		return jugador, nil
+	} else {
+		jugador := &pb.Jugador{
+			Id:   -1,
+			Bot:  req.GetBot(),
+			Vive: false,
+		}
+		return jugador, nil
 	}
-	server.savedJugadores[server.cantidadJugadores] = jugador
-	server.cantidadJugadores = server.cantidadJugadores + 1
-	return jugador, nil
+
 }
 
 func (server *LiderServer) IniciarEtapa(req *pb.SolicitarInicioJuego, stream pb.JugadorLiderService_IniciarEtapaServer) error {
@@ -57,7 +68,7 @@ func (server *LiderServer) IniciarEtapa(req *pb.SolicitarInicioJuego, stream pb.
 	}); err != nil {
 		return err
 	}
-	log.Printf("Iniciar etapa listo")
+
 	return nil
 }
 

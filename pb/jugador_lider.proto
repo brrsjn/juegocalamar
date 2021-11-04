@@ -20,12 +20,19 @@ message EsperandoJugadores {
     string message = 1;
 }
 
+message JugadaEtapa1 {
+    int32 step =1;
+} 
+
+message Etapa {
+    int32 id =1;
+}
+
 service JugadorLiderService {
     rpc SolicitarUnirce(InscripcionJugador) returns (Jugador) {};
 
     rpc IniciarEtapa(SolicitarInicioJuego) returns (stream EsperandoJugadores) {};
+
+    rpc Jugar(Etapa) returns (stream JugadaEtapa1) {};
 }
 
-message JugadaEtapa1 {
-    int32 step =1;
-}
