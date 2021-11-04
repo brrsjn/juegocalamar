@@ -36,6 +36,12 @@ const (
 	defaultBot = true
 )
 
+type Jugada struct {
+	Jugador *pb.Jugador
+	mensaje string
+	etapa   int32
+}
+
 func EsperarLider(client pb.JugadorLiderServiceClient, id int32) {
 	stream, err := client.IniciarEtapa(context.TODO(), &pb.SolicitarInicioJuego{
 		Id: id,
@@ -53,7 +59,11 @@ func EsperarLider(client pb.JugadorLiderServiceClient, id int32) {
 		}
 		log.Printf("%s", message.Message)
 	}
-	log.Printf("Terminó")
+	log.Printf("Listos Para jugar")
+}
+
+func EnviarJugada(client pb.JugadorLiderServiceClient) {
+
 }
 
 func main() {
@@ -67,17 +77,23 @@ func main() {
 
 	// Contact the server and print out its response.
 	bot := defaultBot
-	if len(os.Args) > 1 {
-		if os.Args[1] == "--cli" {
-			bot = true
-		}
+	if os.Args[len(os.Args)-1] == "--cli" {
+		bot = false
+	} else {
+		bot = true
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	r, err := c.SolicitarUnirce(ctx, &pb.InscripcionJugador{Bot: bot})
 	if err != nil {
 		log.Fatalf("could not greet: %v", err)
+
 	}
-	log.Printf("Tu identificador es: %d", r.GetId())
-	EsperarLider(c, r.GetId())
+	if r.Id == -1 {
+		log.Printf("La sala esta llena")
+	} else {
+		log.Printf("Tu identificador es: %d", r.GetId())
+		EsperarLider(c, r.GetId())
+	}
+
 }
