@@ -94,6 +94,7 @@ func main() {
 	} else {
 		log.Printf("Tu identificador es: %d", r.GetId())
 		EsperarLider(c, r.GetId())
+
 	}
 
 }
