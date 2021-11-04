@@ -5,3 +5,12 @@ clean:
 
 run:
 	go run main.go
+
+server:
+	go run service/lider_service.go
+
+jugador_cliente:
+	go run jugador/jugador.go --cli
+
+jugador_bot:
+	go run jugador/jugador.go
