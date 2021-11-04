@@ -3,11 +3,15 @@ syntax = "proto3";
 option go_package = "/pb";
 
 message Jugador {
-    string id = 1;
+    int32 id = 1;
     bool bot = 2;
     bool vive = 3;
 }
 
+message InscripcionJugador {
+    bool bot = 1;
+}
+
 service JugadorLiderService {
-    rpc SolicitarUnirce(Jugador) returns (Jugador) {};
+    rpc SolicitarUnirce(InscripcionJugador) returns (Jugador) {};
 }
