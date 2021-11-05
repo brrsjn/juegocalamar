@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion7
 type JugadorLiderServiceClient interface {
 	SolicitarUnirce(ctx context.Context, in *InscripcionJugador, opts ...grpc.CallOption) (*Jugador, error)
 	IniciarEtapa(ctx context.Context, in *SolicitarInicioJuego, opts ...grpc.CallOption) (JugadorLiderService_IniciarEtapaClient, error)
+	Jugar(ctx context.Context, in *Etapa, opts ...grpc.CallOption) (JugadorLiderService_JugarClient, error)
 }
 
 type jugadorLiderServiceClient struct {
@@ -71,12 +72,45 @@ func (x *jugadorLiderServiceIniciarEtapaClient) Recv() (*EsperandoJugadores, err
 	return m, nil
 }
 
+func (c *jugadorLiderServiceClient) Jugar(ctx context.Context, in *Etapa, opts ...grpc.CallOption) (JugadorLiderService_JugarClient, error) {
+	stream, err := c.cc.NewStream(ctx, &JugadorLiderService_ServiceDesc.Streams[1], "/JugadorLiderService/Jugar", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &jugadorLiderServiceJugarClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type JugadorLiderService_JugarClient interface {
+	Recv() (*JugadaEtapa1, error)
+	grpc.ClientStream
+}
+
+type jugadorLiderServiceJugarClient struct {
+	grpc.ClientStream
+}
+
+func (x *jugadorLiderServiceJugarClient) Recv() (*JugadaEtapa1, error) {
+	m := new(JugadaEtapa1)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // JugadorLiderServiceServer is the server API for JugadorLiderService service.
 // All implementations must embed UnimplementedJugadorLiderServiceServer
 // for forward compatibility
 type JugadorLiderServiceServer interface {
 	SolicitarUnirce(context.Context, *InscripcionJugador) (*Jugador, error)
 	IniciarEtapa(*SolicitarInicioJuego, JugadorLiderService_IniciarEtapaServer) error
+	Jugar(*Etapa, JugadorLiderService_JugarServer) error
 	mustEmbedUnimplementedJugadorLiderServiceServer()
 }
 
@@ -89,6 +123,9 @@ func (UnimplementedJugadorLiderServiceServer) SolicitarUnirce(context.Context, *
 }
 func (UnimplementedJugadorLiderServiceServer) IniciarEtapa(*SolicitarInicioJuego, JugadorLiderService_IniciarEtapaServer) error {
 	return status.Errorf(codes.Unimplemented, "method IniciarEtapa not implemented")
+}
+func (UnimplementedJugadorLiderServiceServer) Jugar(*Etapa, JugadorLiderService_JugarServer) error {
+	return status.Errorf(codes.Unimplemented, "method Jugar not implemented")
 }
 func (UnimplementedJugadorLiderServiceServer) mustEmbedUnimplementedJugadorLiderServiceServer() {}
 
@@ -142,6 +179,27 @@ func (x *jugadorLiderServiceIniciarEtapaServer) Send(m *EsperandoJugadores) erro
 	return x.ServerStream.SendMsg(m)
 }
 
+func _JugadorLiderService_Jugar_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(Etapa)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(JugadorLiderServiceServer).Jugar(m, &jugadorLiderServiceJugarServer{stream})
+}
+
+type JugadorLiderService_JugarServer interface {
+	Send(*JugadaEtapa1) error
+	grpc.ServerStream
+}
+
+type jugadorLiderServiceJugarServer struct {
+	grpc.ServerStream
+}
+
+func (x *jugadorLiderServiceJugarServer) Send(m *JugadaEtapa1) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 // JugadorLiderService_ServiceDesc is the grpc.ServiceDesc for JugadorLiderService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -158,6 +216,11 @@ var JugadorLiderService_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "IniciarEtapa",
 			Handler:       _JugadorLiderService_IniciarEtapa_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "Jugar",
+			Handler:       _JugadorLiderService_Jugar_Handler,
 			ServerStreams: true,
 		},
 	},
