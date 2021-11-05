@@ -26,6 +26,10 @@ const (
 
 var totalpozo int = 0
 
+const (
+	address = "localhost:50052"
+)
+
 type LiderServer struct {
 	pb.UnimplementedJugadorLiderServiceServer
 
@@ -43,6 +47,9 @@ type LiderServer struct {
 	CurrentRonda  int32
 	TriggerReady  bool
 	JugadasEtapas [3]jugadasRondas
+
+	// Cliente para guardar jugadas
+	NameNodeCliente pb.LiderNameNodeServiceClient
 }
 type jugadasRondas struct {
 	Etapa         int32
@@ -153,6 +160,14 @@ func (server *LiderServer) LuzRojaLuzVerde(req *pb.JugadaCliente, stream pb.Juga
 		playerObj: req.GetJugador(),
 		Movement:  int(req.GetMessage()),
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	jugadaToNameNode := pb.JugadaToDataNode{
+		Id:         int32(jugadaCl.idPlayer),
+		Etapa:      1,
+		Movimiento: int32(jugadaCl.Movement),
+	}
+	server.NameNodeCliente.GuardarJugada(ctx, &jugadaToNameNode)
+	defer cancel()
 	server.JugadasEtapas[server.CurrentEtapa].jugadasRondas[server.CurrentRonda].jugadas[jugadaCl.idPlayer] = jugadaCl
 	server.JugadasEtapas[server.CurrentEtapa].jugadasRondas[server.CurrentRonda].jugadasHechas = server.JugadasEtapas[server.CurrentEtapa].jugadasRondas[server.CurrentRonda].jugadasHechas + 1
 	log.Printf("Juegada recibida por jugador %d", &jugadaCl.idPlayer)
@@ -300,7 +315,19 @@ func crearJugadaBot(jugador *pb.Jugador, floor int, top int) jugada {
 	return jugadaBot
 }
 
+func conexionANameNode() {
+
+}
+
 func main() {
+	// Set up a connection to the server.
+	conn, err := grpc.Dial(address, grpc.WithInsecure(), grpc.WithBlock())
+	if err != nil {
+		log.Fatalf("did not connect: %v", err)
+	}
+	defer conn.Close()
+	nameNode := pb.NewLiderNameNodeServiceClient(conn)
+
 	//totalpozo = totalpozo + 100000000
 	//EnviarAPozoJugadorEliminado(3, 2, totalpozo) //Ejemplo para enviar pozo a jugador eliminado
 	//EnviarAPozoJugadorEliminado(3, 2) //Ejemplo para enviar pozo a jugador eliminado
@@ -312,7 +339,7 @@ func main() {
 	//reader := bufio.NewReader(os.Stdin)
 
 	var playersNo int
-	_, err := fmt.Scanf("%d", &playersNo)
+	fmt.Scanf("%d", &playersNo)
 	//if err != nil
 
 	lis, err := net.Listen("tcp", port)
@@ -328,6 +355,7 @@ func main() {
 		AlivePlayersCounter: 0,
 		CurrentEtapa:        1,
 		CurrentRonda:        1,
+		NameNodeCliente:     nameNode,
 	})
 	reflection.Register(s)
 
