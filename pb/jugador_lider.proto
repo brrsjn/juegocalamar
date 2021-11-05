@@ -30,11 +30,13 @@ message Etapa {
 }
 message jugadaCliente {
     int32 id =1;
-    int32 message = 2;
+    Jugador jugador=2;
+    int32 message = 3;
 }
 message jugadaLider {
     int32 id =1;
     int32 message = 2;
+    bool readyEtapa =3;
 }
 
 service JugadorLiderService {
