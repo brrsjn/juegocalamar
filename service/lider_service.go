@@ -20,17 +20,37 @@ const (
 )
 
 //type pozoMonto struct{
-//	totalMonto int
+//	totalMonto int32
 //}
 
 var totalpozo int = 0
 
 type LiderServer struct {
 	pb.UnimplementedJugadorLiderServiceServer
-	savedJugadores    [16]*pb.Jugador
-	deadJugadores     [16]*pb.Jugador
-	cantidadJugadores int32
+
+	//Manejo de jugadores
 	TotalPlayers      int32
+	cantidadJugadores int32
+	savedJugadores    [16]*pb.Jugador
+
+	//jugadores que han muerto
+	deadJugadores [16]*pb.Jugador
+
+	// info de las jugadas
+	EtapaNo       int32
+	ronda         int32
+	JugadasRondas [3]jugadas
+}
+
+type jugadas struct {
+	Etapa   int
+	ronda   int
+	jugadas [16]jugada
+	total   int
+}
+type jugada struct {
+	idPlayer int
+	Movement int
 }
 
 func viveJugador(lider int, jugador int) bool {
@@ -49,7 +69,7 @@ func (server *LiderServer) SolicitarUnirce(ctx context.Context, req *pb.Inscripc
 	if server.cantidadJugadores < server.TotalPlayers {
 		log.Printf("Received bot: %v", req.GetBot())
 		jugador := &pb.Jugador{
-			Id:   server.cantidadJugadores + 1,
+			Id:   server.cantidadJugadores,
 			Bot:  req.GetBot(),
 			Vive: true,
 		}
@@ -72,28 +92,33 @@ func (server *LiderServer) IniciarEtapa(req *pb.SolicitarInicioJuego, stream pb.
 	for server.cantidadJugadores < server.TotalPlayers {
 		time.Sleep(1 * time.Second)
 	}
-	for server.cantidadJugadores < 16 {
+	for server.cantidadJugadores < 15 {
 
+		server.cantidadJugadores = server.cantidadJugadores + 1
 		jugador := &pb.Jugador{
-			Id:   server.cantidadJugadores + 1,
+			Id:   server.cantidadJugadores,
 			Bot:  true,
 			Vive: true,
 		}
 		server.savedJugadores[server.cantidadJugadores] = jugador
-		server.cantidadJugadores = server.cantidadJugadores + 1
-
+		log.Printf("New bot player %d", jugador.Id)
 	}
 	if err := stream.Send(&pb.EsperandoJugadores{
-		Message: "Se han completado los jugadores",
+		Message:      "Se han completado los jugadores",
+		Confirmacion: true,
 	}); err != nil {
 		return err
 	}
-
 	return nil
 }
 
-func CreateBots() {
+///*
+func (server *LiderServer) LuzRojaLuzVerde(req *pb.JugadaCliente, stream pb.JugadorLiderService_LuzRojaLuzVerdeServer) error {
+	stream.SendMsg(&pb.JugadaLider{
+		Message: 2,
+	})
 
+	return nil
 }
 
 func failOnError(err error, msg string) {
@@ -125,7 +150,7 @@ func crearArchivo() {
 	//fmt.Println("File Created Successfully", path)
 }
 
-func EnviarAPozoJugadorEliminado(id int, etapa int, monto int) {
+func EnviarAPozoJugadorEliminado(id int, n_ronda int, monto int) {
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
@@ -145,13 +170,13 @@ func EnviarAPozoJugadorEliminado(id int, etapa int, monto int) {
 	failOnError(err, "Failed to declare a queue")
 
 	var id_jugador string
-	var id_etapa string
+	var id_ronda string
 	var id_monto string
 	id_jugador = strconv.Itoa(id)
-	id_etapa = strconv.Itoa(etapa)
+	id_ronda = strconv.Itoa(n_ronda)
 	id_monto = strconv.Itoa(monto) //el monto ya viene con el nuevo total
 
-	body := "Jugador_" + id_jugador + " Etapa_" + id_etapa + " " + id_monto
+	body := "Jugador_" + id_jugador + " Ronda_" + id_ronda + " " + id_monto
 	err = ch.Publish(
 		"",     // exchange
 		q.Name, // routing key
@@ -166,7 +191,8 @@ func EnviarAPozoJugadorEliminado(id int, etapa int, monto int) {
 }
 
 func main() {
-	EnviarAPozoJugadorEliminado(3, 2, totalpozo+100000000) //Ejemplo para enviar pozo a jugador eliminado
+	totalpozo = totalpozo + 100000000
+	EnviarAPozoJugadorEliminado(3, 2, totalpozo) //Ejemplo para enviar pozo a jugador eliminado
 
 	//Bienvenida e inicio del juego
 	fmt.Println("___Bienvenido al juego del Calamardo___")
@@ -182,11 +208,18 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
+
 	s := grpc.NewServer()
+
 	pb.RegisterJugadorLiderServiceServer(s, &LiderServer{cantidadJugadores: 0, TotalPlayers: int32(playersNo)})
 	reflection.Register(s)
+
 	log.Printf("server listening at %v", lis.Addr())
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
+
+	//Jugar
+	//pb.Etapa1Server(s)
+
 }
