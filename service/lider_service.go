@@ -28,6 +28,7 @@ type LiderServer struct {
 
 	//jugadores que han muerto
 	deadJugadores       [16]*pb.Jugador
+	AlivePlayers        [16]*pb.Jugador
 	AlivePlayersCounter int32
 
 	// info de las jugadas
@@ -76,6 +77,7 @@ func (server *LiderServer) SolicitarUnirce(ctx context.Context, req *pb.Inscripc
 		}
 
 		server.savedJugadores[server.cantidadJugadores] = jugador
+		server.AlivePlayers[server.cantidadJugadores] = jugador
 		server.cantidadJugadores = server.cantidadJugadores + 1
 		server.AlivePlayersCounter = server.AlivePlayersCounter + 1
 		return jugador, nil
@@ -88,6 +90,10 @@ func (server *LiderServer) SolicitarUnirce(ctx context.Context, req *pb.Inscripc
 		return jugador, nil
 	}
 
+}
+func (server *LiderServer) EstadoDelJugador(ctx context.Context, req *pb.Jugador) (*pb.Jugador, error) {
+	req = server.savedJugadores[req.Id]
+	return req, nil
 }
 
 func (server *LiderServer) IniciarEtapa(req *pb.SolicitarInicioJuego, stream pb.JugadorLiderService_IniciarEtapaServer) error {
@@ -105,6 +111,7 @@ func (server *LiderServer) IniciarEtapa(req *pb.SolicitarInicioJuego, stream pb.
 			Vive: true,
 		}
 		server.savedJugadores[server.cantidadJugadores] = jugador
+		server.AlivePlayers[server.cantidadJugadores] = jugador
 
 		log.Printf("New bot player %d", jugador.Id)
 	}
@@ -145,27 +152,31 @@ func (server *LiderServer) LuzRojaLuzVerde(req *pb.JugadaCliente, stream pb.Juga
 		playerObj: req.GetJugador(),
 		Movement:  int(req.GetMessage()),
 	}
-	server.JugadasEtapas[server.CurrentEtapa].jugadasRondas[server.CurrentRonda].jugadas[jugadaCl.idPlayer] = jugadaCl
-	server.JugadasEtapas[server.CurrentEtapa].jugadasRondas[server.CurrentRonda].jugadasHechas = server.JugadasEtapas[server.CurrentEtapa].jugadasRondas[server.CurrentRonda].jugadasHechas + 1
+	server.JugadasEtapas[server.CurrentEtapa-1].jugadasRondas[server.CurrentRonda-1].jugadas[jugadaCl.idPlayer] = jugadaCl
+	server.JugadasEtapas[server.CurrentEtapa-1].jugadasRondas[server.CurrentRonda-1].jugadasHechas = server.JugadasEtapas[server.CurrentEtapa-1].jugadasRondas[server.CurrentRonda-1].jugadasHechas + 1
 	log.Printf("Juegada recibida por jugador %d", &jugadaCl.idPlayer)
-	if int(server.TotalPlayers) == server.JugadasEtapas[server.CurrentEtapa].jugadasRondas[server.CurrentRonda].jugadasHechas {
+
+	//Jugada de los Bots
+	if int(server.TotalPlayers) == server.JugadasEtapas[server.CurrentEtapa-1].jugadasRondas[server.CurrentRonda-1].jugadasHechas {
 		log.Println("juegan los bots")
 		for _, c := range server.savedJugadores {
 			if c != nil {
 				if c.Bot {
 					if c.Vive {
 						play := crearJugadaBot(c, 0, 10)
-						server.JugadasEtapas[server.CurrentEtapa].jugadasRondas[server.CurrentRonda].jugadas[play.idPlayer] = play
-						server.JugadasEtapas[server.CurrentEtapa].jugadasRondas[server.CurrentRonda].jugadasHechas = server.JugadasEtapas[server.CurrentEtapa].jugadasRondas[server.CurrentRonda].jugadasHechas + 1
+						server.JugadasEtapas[server.CurrentEtapa-1].jugadasRondas[server.CurrentRonda-1].jugadas[play.idPlayer] = play
+						server.JugadasEtapas[server.CurrentEtapa-1].jugadasRondas[server.CurrentRonda-1].jugadasHechas = server.JugadasEtapas[server.CurrentEtapa-1].jugadasRondas[server.CurrentRonda-1].jugadasHechas + 1
 						log.Printf("Juegada recibida por Bot %d", &play.idPlayer)
 					}
 				}
 			}
 		}
 		log.Print(server.AlivePlayersCounter)
-		log.Print(server.JugadasEtapas[server.CurrentEtapa].jugadasRondas[server.CurrentRonda].jugadasHechas)
+		log.Print(server.JugadasEtapas[server.CurrentEtapa-1].jugadasRondas[server.CurrentRonda-1].jugadasHechas)
 	}
-	if int(server.AlivePlayersCounter) == server.JugadasEtapas[server.CurrentEtapa].jugadasRondas[server.CurrentRonda].jugadasHechas {
+
+	//Jugaron todos los players vivos
+	if int(server.AlivePlayersCounter) == server.JugadasEtapas[server.CurrentEtapa-1].jugadasRondas[server.CurrentRonda-1].jugadasHechas {
 		log.Println("Ahora juega el Lider")
 		r1 = rand.Intn(4) + 6
 		jugadaLid := jugada{
@@ -174,23 +185,31 @@ func (server *LiderServer) LuzRojaLuzVerde(req *pb.JugadaCliente, stream pb.Juga
 		}
 		fmt.Print("Jugada del Lider: ")
 		fmt.Printf("%d", r1)
+		fmt.Print(" Ronda: ")
+		fmt.Printf("%d", server.CurrentRonda)
 		fmt.Println()
-		server.JugadasEtapas[server.CurrentEtapa].Etapa = server.CurrentEtapa
-		server.JugadasEtapas[server.CurrentEtapa].ronda = server.CurrentRonda
-		server.JugadasEtapas[server.CurrentEtapa].jugadasRondas[server.CurrentRonda].jugadaLider = jugadaLid
+
+		server.JugadasEtapas[server.CurrentEtapa-1].Etapa = server.CurrentEtapa
+		server.JugadasEtapas[server.CurrentEtapa-1].ronda = server.CurrentRonda
+		server.JugadasEtapas[server.CurrentEtapa-1].jugadasRondas[server.CurrentRonda-1].jugadaLider = jugadaLid
+		server.AlivePlayersCounter = 0
 		for _, c := range server.savedJugadores {
 			if c != nil {
 				if c.Vive {
 					id := c.GetId()
-					play := server.JugadasEtapas[server.CurrentEtapa].jugadasRondas[server.CurrentRonda].jugadas[id]
+					play := server.JugadasEtapas[server.CurrentEtapa-1].jugadasRondas[server.CurrentRonda-1].jugadas[id]
 					if play.Movement > r1-1 {
 						server.savedJugadores[c.Id].Vive = false
 						server.deadJugadores[c.Id] = c
 						fmt.Print("jugador Eliminado: ")
 						fmt.Printf("%d", c.Id)
 						fmt.Println()
+					} else {
+						server.AlivePlayersCounter = server.AlivePlayersCounter + 1
+						fmt.Print("jugador Sobrevive: ")
+						fmt.Printf("%d", c.Id)
+						fmt.Println()
 					}
-
 				}
 			}
 		}
@@ -201,6 +220,28 @@ func (server *LiderServer) LuzRojaLuzVerde(req *pb.JugadaCliente, stream pb.Juga
 			})
 			server.CurrentRonda = server.CurrentRonda + 1
 		} else {
+
+			//ejecutar que se mueran todos los que sumen menos de 21
+			server.AlivePlayersCounter = 0
+			for _, c := range server.savedJugadores {
+				if c != nil {
+					if c.Vive {
+						if int(c.SumaJugada1) > 21 {
+							server.savedJugadores[c.Id].Vive = false
+							server.deadJugadores[c.Id] = c
+							fmt.Print("jugador EliminadoPor no llegar: ")
+							fmt.Printf("%d", c.Id)
+							fmt.Println()
+						} else {
+							server.AlivePlayersCounter = server.AlivePlayersCounter + 1
+							fmt.Print("jugador Sobrevive: ")
+							fmt.Printf("%d", c.Id)
+							fmt.Println()
+						}
+					}
+				}
+			}
+			fmt.Println("LuzVerde LuzRoja Terminado")
 			stream.SendMsg(&pb.JugadaLider{
 				Message:    int32(r1),
 				ReadyEtapa: true,
@@ -209,7 +250,6 @@ func (server *LiderServer) LuzRojaLuzVerde(req *pb.JugadaCliente, stream pb.Juga
 			server.CurrentRonda = 1
 		}
 	}
-
 	return nil
 }
 

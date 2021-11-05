@@ -103,7 +103,9 @@ func main() {
 	clientes = append(clientes, cliente1, cliente2, cliente3)
 
 	//Para distribuir a los clientes
-	cliente = clientes[rand.Intn(len(clientes))]
+	cliente := clientes[rand.Intn(len(clientes))]
+	log.Print(cliente)
+	///esta wea habia tirado error asi que le puse un :
 
 	EnviarJugadaADataNode(cliente1)
 	EnviarJugadaADataNode(cliente2)

@@ -21,6 +21,7 @@ type JugadorLiderServiceClient interface {
 	SolicitarUnirce(ctx context.Context, in *InscripcionJugador, opts ...grpc.CallOption) (*Jugador, error)
 	IniciarEtapa(ctx context.Context, in *SolicitarInicioJuego, opts ...grpc.CallOption) (JugadorLiderService_IniciarEtapaClient, error)
 	LuzRojaLuzVerde(ctx context.Context, in *JugadaCliente, opts ...grpc.CallOption) (JugadorLiderService_LuzRojaLuzVerdeClient, error)
+	EstadoDelJugador(ctx context.Context, in *Jugador, opts ...grpc.CallOption) (*Jugador, error)
 }
 
 type jugadorLiderServiceClient struct {
@@ -104,6 +105,15 @@ func (x *jugadorLiderServiceLuzRojaLuzVerdeClient) Recv() (*JugadaLider, error) 
 	return m, nil
 }
 
+func (c *jugadorLiderServiceClient) EstadoDelJugador(ctx context.Context, in *Jugador, opts ...grpc.CallOption) (*Jugador, error) {
+	out := new(Jugador)
+	err := c.cc.Invoke(ctx, "/JugadorLiderService/EstadoDelJugador", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // JugadorLiderServiceServer is the server API for JugadorLiderService service.
 // All implementations must embed UnimplementedJugadorLiderServiceServer
 // for forward compatibility
@@ -111,6 +121,7 @@ type JugadorLiderServiceServer interface {
 	SolicitarUnirce(context.Context, *InscripcionJugador) (*Jugador, error)
 	IniciarEtapa(*SolicitarInicioJuego, JugadorLiderService_IniciarEtapaServer) error
 	LuzRojaLuzVerde(*JugadaCliente, JugadorLiderService_LuzRojaLuzVerdeServer) error
+	EstadoDelJugador(context.Context, *Jugador) (*Jugador, error)
 	mustEmbedUnimplementedJugadorLiderServiceServer()
 }
 
@@ -126,6 +137,9 @@ func (UnimplementedJugadorLiderServiceServer) IniciarEtapa(*SolicitarInicioJuego
 }
 func (UnimplementedJugadorLiderServiceServer) LuzRojaLuzVerde(*JugadaCliente, JugadorLiderService_LuzRojaLuzVerdeServer) error {
 	return status.Errorf(codes.Unimplemented, "method LuzRojaLuzVerde not implemented")
+}
+func (UnimplementedJugadorLiderServiceServer) EstadoDelJugador(context.Context, *Jugador) (*Jugador, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method EstadoDelJugador not implemented")
 }
 func (UnimplementedJugadorLiderServiceServer) mustEmbedUnimplementedJugadorLiderServiceServer() {}
 
@@ -200,6 +214,24 @@ func (x *jugadorLiderServiceLuzRojaLuzVerdeServer) Send(m *JugadaLider) error {
 	return x.ServerStream.SendMsg(m)
 }
 
+func _JugadorLiderService_EstadoDelJugador_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Jugador)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JugadorLiderServiceServer).EstadoDelJugador(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/JugadorLiderService/EstadoDelJugador",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JugadorLiderServiceServer).EstadoDelJugador(ctx, req.(*Jugador))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // JugadorLiderService_ServiceDesc is the grpc.ServiceDesc for JugadorLiderService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -210,6 +242,10 @@ var JugadorLiderService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SolicitarUnirce",
 			Handler:    _JugadorLiderService_SolicitarUnirce_Handler,
+		},
+		{
+			MethodName: "EstadoDelJugador",
+			Handler:    _JugadorLiderService_EstadoDelJugador_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

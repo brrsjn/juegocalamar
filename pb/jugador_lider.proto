@@ -6,6 +6,7 @@ message Jugador {
     int32 id = 1;
     bool bot = 2;
     bool vive = 3;
+    int32 SumaJugada1= 4;
 }
 
 message InscripcionJugador {
@@ -45,4 +46,6 @@ service JugadorLiderService {
     rpc IniciarEtapa(SolicitarInicioJuego) returns (stream EsperandoJugadores) {};
 
     rpc LuzRojaLuzVerde(jugadaCliente) returns (stream jugadaLider) {};
+
+    rpc EstadoDelJugador(Jugador) returns (Jugador) {}
 }

@@ -63,11 +63,35 @@ func EsperarLider(client pb.JugadorLiderServiceClient, self *pb.Jugador) {
 
 	}
 	log.Printf("Listos Para jugar")
-	EnviarJugadaEtapa1(client, self, 1)
+	EmpezaraJugarEtapa(client, self, 1)
 
 }
 
-func EnviarJugadaEtapa1(client pb.JugadorLiderServiceClient, self *pb.Jugador, etapa int32) {
+func EmpezaraJugarEtapa(client pb.JugadorLiderServiceClient, self *pb.Jugador, etapa int32) {
+	self = checkPlayerStatus(client, self)
+	if self.Vive {
+		if etapa == 1 {
+			EnviarJugadaEtapa1(client, self)
+		}
+		if etapa == 2 {
+			log.Print("Juego 2")
+			//EnviarJugadaEtapa1(client, self)
+		}
+		if etapa == 3 {
+			log.Print("Juego 3")
+			//EnviarJugadaEtapa1(client, self)
+		}
+	} else {
+		fmt.Println("El jugador ha sido eliminado")
+	}
+}
+
+func checkPlayerStatus(client pb.JugadorLiderServiceClient, self *pb.Jugador) *pb.Jugador {
+	self, _ = client.EstadoDelJugador(context.TODO(), self)
+	return self
+}
+
+func EnviarJugadaEtapa1(client pb.JugadorLiderServiceClient, self *pb.Jugador) {
 
 	//
 	//reader := bufio.NewReader(os.Stdin)
@@ -78,14 +102,16 @@ func EnviarJugadaEtapa1(client pb.JugadorLiderServiceClient, self *pb.Jugador, e
 		_, err := fmt.Scanf("%d", &Movement)
 		if err == nil {
 			fmt.Println("JUGADA HECHA")
+			self.SumaJugada1 = self.SumaJugada1 + Movement
 			break
 		}
 
 	}
-	stream, err := client.LuzRojaLuzVerde(context.Background(), &pb.JugadaCliente{Id: self.GetId(), Message: Movement})
+	stream, err := client.LuzRojaLuzVerde(context.TODO(), &pb.JugadaCliente{Id: self.GetId(), Message: Movement})
 	if err != nil {
 		log.Fatalf("%v.ListFeatures(_) = _, %v", client, err)
 	}
+	var NextEtapa int
 	for {
 		message, err := stream.Recv()
 		if err == io.EOF {
@@ -95,13 +121,13 @@ func EnviarJugadaEtapa1(client pb.JugadorLiderServiceClient, self *pb.Jugador, e
 			log.Fatalf("%v.ListFeatures(_) = _, %v", client, err)
 		}
 		log.Printf("No te muevas... (comparando %d con %d) ", message.Message, Movement)
-
+		if message.ReadyEtapa {
+			NextEtapa = 2
+		} else {
+			NextEtapa = 1
+		}
 	}
-
-}
-
-func EmpezaraJugarEtapa1() {
-
+	EmpezaraJugarEtapa(client, self, int32(NextEtapa))
 }
 
 func main() {
