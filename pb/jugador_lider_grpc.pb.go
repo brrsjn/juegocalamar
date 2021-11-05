@@ -20,11 +20,7 @@ const _ = grpc.SupportPackageIsVersion7
 type JugadorLiderServiceClient interface {
 	SolicitarUnirce(ctx context.Context, in *InscripcionJugador, opts ...grpc.CallOption) (*Jugador, error)
 	IniciarEtapa(ctx context.Context, in *SolicitarInicioJuego, opts ...grpc.CallOption) (JugadorLiderService_IniciarEtapaClient, error)
-<<<<<<< HEAD
-	Jugar(ctx context.Context, in *Etapa, opts ...grpc.CallOption) (JugadorLiderService_JugarClient, error)
-=======
 	LuzRojaLuzVerde(ctx context.Context, in *JugadaCliente, opts ...grpc.CallOption) (JugadorLiderService_LuzRojaLuzVerdeClient, error)
->>>>>>> c6c8bd03b8f61f4b24ebd5e7066425886a59243f
 }
 
 type jugadorLiderServiceClient struct {
@@ -76,21 +72,12 @@ func (x *jugadorLiderServiceIniciarEtapaClient) Recv() (*EsperandoJugadores, err
 	return m, nil
 }
 
-<<<<<<< HEAD
-func (c *jugadorLiderServiceClient) Jugar(ctx context.Context, in *Etapa, opts ...grpc.CallOption) (JugadorLiderService_JugarClient, error) {
-	stream, err := c.cc.NewStream(ctx, &JugadorLiderService_ServiceDesc.Streams[1], "/JugadorLiderService/Jugar", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &jugadorLiderServiceJugarClient{stream}
-=======
 func (c *jugadorLiderServiceClient) LuzRojaLuzVerde(ctx context.Context, in *JugadaCliente, opts ...grpc.CallOption) (JugadorLiderService_LuzRojaLuzVerdeClient, error) {
 	stream, err := c.cc.NewStream(ctx, &JugadorLiderService_ServiceDesc.Streams[1], "/JugadorLiderService/LuzRojaLuzVerde", opts...)
 	if err != nil {
 		return nil, err
 	}
 	x := &jugadorLiderServiceLuzRojaLuzVerdeClient{stream}
->>>>>>> c6c8bd03b8f61f4b24ebd5e7066425886a59243f
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
@@ -100,19 +87,6 @@ func (c *jugadorLiderServiceClient) LuzRojaLuzVerde(ctx context.Context, in *Jug
 	return x, nil
 }
 
-<<<<<<< HEAD
-type JugadorLiderService_JugarClient interface {
-	Recv() (*JugadaEtapa1, error)
-	grpc.ClientStream
-}
-
-type jugadorLiderServiceJugarClient struct {
-	grpc.ClientStream
-}
-
-func (x *jugadorLiderServiceJugarClient) Recv() (*JugadaEtapa1, error) {
-	m := new(JugadaEtapa1)
-=======
 type JugadorLiderService_LuzRojaLuzVerdeClient interface {
 	Recv() (*JugadaLider, error)
 	grpc.ClientStream
@@ -124,7 +98,6 @@ type jugadorLiderServiceLuzRojaLuzVerdeClient struct {
 
 func (x *jugadorLiderServiceLuzRojaLuzVerdeClient) Recv() (*JugadaLider, error) {
 	m := new(JugadaLider)
->>>>>>> c6c8bd03b8f61f4b24ebd5e7066425886a59243f
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -137,11 +110,7 @@ func (x *jugadorLiderServiceLuzRojaLuzVerdeClient) Recv() (*JugadaLider, error) 
 type JugadorLiderServiceServer interface {
 	SolicitarUnirce(context.Context, *InscripcionJugador) (*Jugador, error)
 	IniciarEtapa(*SolicitarInicioJuego, JugadorLiderService_IniciarEtapaServer) error
-<<<<<<< HEAD
-	Jugar(*Etapa, JugadorLiderService_JugarServer) error
-=======
 	LuzRojaLuzVerde(*JugadaCliente, JugadorLiderService_LuzRojaLuzVerdeServer) error
->>>>>>> c6c8bd03b8f61f4b24ebd5e7066425886a59243f
 	mustEmbedUnimplementedJugadorLiderServiceServer()
 }
 
@@ -155,13 +124,8 @@ func (UnimplementedJugadorLiderServiceServer) SolicitarUnirce(context.Context, *
 func (UnimplementedJugadorLiderServiceServer) IniciarEtapa(*SolicitarInicioJuego, JugadorLiderService_IniciarEtapaServer) error {
 	return status.Errorf(codes.Unimplemented, "method IniciarEtapa not implemented")
 }
-<<<<<<< HEAD
-func (UnimplementedJugadorLiderServiceServer) Jugar(*Etapa, JugadorLiderService_JugarServer) error {
-	return status.Errorf(codes.Unimplemented, "method Jugar not implemented")
-=======
 func (UnimplementedJugadorLiderServiceServer) LuzRojaLuzVerde(*JugadaCliente, JugadorLiderService_LuzRojaLuzVerdeServer) error {
 	return status.Errorf(codes.Unimplemented, "method LuzRojaLuzVerde not implemented")
->>>>>>> c6c8bd03b8f61f4b24ebd5e7066425886a59243f
 }
 func (UnimplementedJugadorLiderServiceServer) mustEmbedUnimplementedJugadorLiderServiceServer() {}
 
@@ -215,26 +179,6 @@ func (x *jugadorLiderServiceIniciarEtapaServer) Send(m *EsperandoJugadores) erro
 	return x.ServerStream.SendMsg(m)
 }
 
-<<<<<<< HEAD
-func _JugadorLiderService_Jugar_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(Etapa)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(JugadorLiderServiceServer).Jugar(m, &jugadorLiderServiceJugarServer{stream})
-}
-
-type JugadorLiderService_JugarServer interface {
-	Send(*JugadaEtapa1) error
-	grpc.ServerStream
-}
-
-type jugadorLiderServiceJugarServer struct {
-	grpc.ServerStream
-}
-
-func (x *jugadorLiderServiceJugarServer) Send(m *JugadaEtapa1) error {
-=======
 func _JugadorLiderService_LuzRojaLuzVerde_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(JugadaCliente)
 	if err := stream.RecvMsg(m); err != nil {
@@ -253,7 +197,6 @@ type jugadorLiderServiceLuzRojaLuzVerdeServer struct {
 }
 
 func (x *jugadorLiderServiceLuzRojaLuzVerdeServer) Send(m *JugadaLider) error {
->>>>>>> c6c8bd03b8f61f4b24ebd5e7066425886a59243f
 	return x.ServerStream.SendMsg(m)
 }
 
@@ -276,13 +219,8 @@ var JugadorLiderService_ServiceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 		},
 		{
-<<<<<<< HEAD
-			StreamName:    "Jugar",
-			Handler:       _JugadorLiderService_Jugar_Handler,
-=======
 			StreamName:    "LuzRojaLuzVerde",
 			Handler:       _JugadorLiderService_LuzRojaLuzVerde_Handler,
->>>>>>> c6c8bd03b8f61f4b24ebd5e7066425886a59243f
 			ServerStreams: true,
 		},
 	},
