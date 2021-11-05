@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion7
 type JugadorLiderServiceClient interface {
 	SolicitarUnirce(ctx context.Context, in *InscripcionJugador, opts ...grpc.CallOption) (*Jugador, error)
 	IniciarEtapa(ctx context.Context, in *SolicitarInicioJuego, opts ...grpc.CallOption) (JugadorLiderService_IniciarEtapaClient, error)
+	LuzRojaLuzVerde(ctx context.Context, in *JugadaCliente, opts ...grpc.CallOption) (JugadorLiderService_LuzRojaLuzVerdeClient, error)
 }
 
 type jugadorLiderServiceClient struct {
@@ -71,12 +72,45 @@ func (x *jugadorLiderServiceIniciarEtapaClient) Recv() (*EsperandoJugadores, err
 	return m, nil
 }
 
+func (c *jugadorLiderServiceClient) LuzRojaLuzVerde(ctx context.Context, in *JugadaCliente, opts ...grpc.CallOption) (JugadorLiderService_LuzRojaLuzVerdeClient, error) {
+	stream, err := c.cc.NewStream(ctx, &JugadorLiderService_ServiceDesc.Streams[1], "/JugadorLiderService/LuzRojaLuzVerde", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &jugadorLiderServiceLuzRojaLuzVerdeClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type JugadorLiderService_LuzRojaLuzVerdeClient interface {
+	Recv() (*JugadaLider, error)
+	grpc.ClientStream
+}
+
+type jugadorLiderServiceLuzRojaLuzVerdeClient struct {
+	grpc.ClientStream
+}
+
+func (x *jugadorLiderServiceLuzRojaLuzVerdeClient) Recv() (*JugadaLider, error) {
+	m := new(JugadaLider)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // JugadorLiderServiceServer is the server API for JugadorLiderService service.
 // All implementations must embed UnimplementedJugadorLiderServiceServer
 // for forward compatibility
 type JugadorLiderServiceServer interface {
 	SolicitarUnirce(context.Context, *InscripcionJugador) (*Jugador, error)
 	IniciarEtapa(*SolicitarInicioJuego, JugadorLiderService_IniciarEtapaServer) error
+	LuzRojaLuzVerde(*JugadaCliente, JugadorLiderService_LuzRojaLuzVerdeServer) error
 	mustEmbedUnimplementedJugadorLiderServiceServer()
 }
 
@@ -89,6 +123,9 @@ func (UnimplementedJugadorLiderServiceServer) SolicitarUnirce(context.Context, *
 }
 func (UnimplementedJugadorLiderServiceServer) IniciarEtapa(*SolicitarInicioJuego, JugadorLiderService_IniciarEtapaServer) error {
 	return status.Errorf(codes.Unimplemented, "method IniciarEtapa not implemented")
+}
+func (UnimplementedJugadorLiderServiceServer) LuzRojaLuzVerde(*JugadaCliente, JugadorLiderService_LuzRojaLuzVerdeServer) error {
+	return status.Errorf(codes.Unimplemented, "method LuzRojaLuzVerde not implemented")
 }
 func (UnimplementedJugadorLiderServiceServer) mustEmbedUnimplementedJugadorLiderServiceServer() {}
 
@@ -142,6 +179,27 @@ func (x *jugadorLiderServiceIniciarEtapaServer) Send(m *EsperandoJugadores) erro
 	return x.ServerStream.SendMsg(m)
 }
 
+func _JugadorLiderService_LuzRojaLuzVerde_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(JugadaCliente)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(JugadorLiderServiceServer).LuzRojaLuzVerde(m, &jugadorLiderServiceLuzRojaLuzVerdeServer{stream})
+}
+
+type JugadorLiderService_LuzRojaLuzVerdeServer interface {
+	Send(*JugadaLider) error
+	grpc.ServerStream
+}
+
+type jugadorLiderServiceLuzRojaLuzVerdeServer struct {
+	grpc.ServerStream
+}
+
+func (x *jugadorLiderServiceLuzRojaLuzVerdeServer) Send(m *JugadaLider) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 // JugadorLiderService_ServiceDesc is the grpc.ServiceDesc for JugadorLiderService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -158,6 +216,11 @@ var JugadorLiderService_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "IniciarEtapa",
 			Handler:       _JugadorLiderService_IniciarEtapa_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "LuzRojaLuzVerde",
+			Handler:       _JugadorLiderService_LuzRojaLuzVerde_Handler,
 			ServerStreams: true,
 		},
 	},

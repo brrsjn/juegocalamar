@@ -18,10 +18,30 @@ const (
 
 type LiderServer struct {
 	pb.UnimplementedJugadorLiderServiceServer
-	savedJugadores    [16]*pb.Jugador
-	deadJugadores     [16]*pb.Jugador
-	cantidadJugadores int32
+
+	//Manejo de jugadores
 	TotalPlayers      int32
+	cantidadJugadores int32
+	savedJugadores    [16]*pb.Jugador
+
+	//jugadores que han muerto
+	deadJugadores [16]*pb.Jugador
+
+	// info de las jugadas
+	EtapaNo       int32
+	ronda         int32
+	JugadasRondas [3]jugadas
+}
+
+type jugadas struct {
+	Etapa   int
+	ronda   int
+	jugadas [16]jugada
+	total   int
+}
+type jugada struct {
+	idPlayer int
+	Movement int
 }
 
 func viveJugador(lider int, jugador int) bool {
@@ -40,7 +60,7 @@ func (server *LiderServer) SolicitarUnirce(ctx context.Context, req *pb.Inscripc
 	if server.cantidadJugadores < server.TotalPlayers {
 		log.Printf("Received bot: %v", req.GetBot())
 		jugador := &pb.Jugador{
-			Id:   server.cantidadJugadores + 1,
+			Id:   server.cantidadJugadores,
 			Bot:  req.GetBot(),
 			Vive: true,
 		}
@@ -63,29 +83,36 @@ func (server *LiderServer) IniciarEtapa(req *pb.SolicitarInicioJuego, stream pb.
 	for server.cantidadJugadores < server.TotalPlayers {
 		time.Sleep(1 * time.Second)
 	}
-	for server.cantidadJugadores < 16 {
+	for server.cantidadJugadores < 15 {
 
+		server.cantidadJugadores = server.cantidadJugadores + 1
 		jugador := &pb.Jugador{
-			Id:   server.cantidadJugadores + 1,
+			Id:   server.cantidadJugadores,
 			Bot:  true,
 			Vive: true,
 		}
 		server.savedJugadores[server.cantidadJugadores] = jugador
-		server.cantidadJugadores = server.cantidadJugadores + 1
-
+		log.Printf("New bot player %d", jugador.Id)
 	}
 	if err := stream.Send(&pb.EsperandoJugadores{
-		Message: "Se han completado los jugadores",
+		Message:      "Se han completado los jugadores",
+		Confirmacion: true,
 	}); err != nil {
 		return err
 	}
+	return nil
+}
+
+///*
+func (server *LiderServer) LuzRojaLuzVerde(req *pb.JugadaCliente, stream pb.JugadorLiderService_LuzRojaLuzVerdeServer) error {
+	stream.SendMsg(&pb.JugadaLider{
+		Message: 2,
+	})
 
 	return nil
 }
 
-func CreateBots() {
-
-}
+//*/
 
 func main() {
 
@@ -103,11 +130,18 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
+
 	s := grpc.NewServer()
+
 	pb.RegisterJugadorLiderServiceServer(s, &LiderServer{cantidadJugadores: 0, TotalPlayers: int32(playersNo)})
 	reflection.Register(s)
+
 	log.Printf("server listening at %v", lis.Addr())
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
+
+	//Jugar
+	//pb.Etapa1Server(s)
+
 }

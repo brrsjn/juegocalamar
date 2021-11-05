@@ -21,6 +21,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -42,9 +43,10 @@ type Jugada struct {
 	etapa   int32
 }
 
-func EsperarLider(client pb.JugadorLiderServiceClient, id int32) {
+func EsperarLider(client pb.JugadorLiderServiceClient, self *pb.Jugador) {
+
 	stream, err := client.IniciarEtapa(context.TODO(), &pb.SolicitarInicioJuego{
-		Id: id,
+		Id: self.Id,
 	})
 	if err != nil {
 		log.Fatalf("%v.ListFeatures(_) = _, %v", client, err)
@@ -58,11 +60,46 @@ func EsperarLider(client pb.JugadorLiderServiceClient, id int32) {
 			log.Fatalf("%v.ListFeatures(_) = _, %v", client, err)
 		}
 		log.Printf("%s", message.Message)
+
 	}
 	log.Printf("Listos Para jugar")
+	EnviarJugadaEtapa1(client, self, 1)
+
 }
 
-func EnviarJugada(client pb.JugadorLiderServiceClient) {
+func EnviarJugadaEtapa1(client pb.JugadorLiderServiceClient, self *pb.Jugador, etapa int32) {
+
+	//
+	//reader := bufio.NewReader(os.Stdin)
+	fmt.Println("Jugaremos,Muevete luz verde")
+	var Movement int32
+	for {
+		_, err := fmt.Scanf("%d", &Movement)
+		if err == nil {
+			fmt.Println("JUGADA HECHA")
+			break
+		}
+
+	}
+	stream, err := client.LuzRojaLuzVerde(context.Background(), &pb.JugadaCliente{Message: Movement})
+	if err != nil {
+		log.Fatalf("%v.ListFeatures(_) = _, %v", client, err)
+	}
+	for {
+		message, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatalf("%v.ListFeatures(_) = _, %v", client, err)
+		}
+		log.Printf("No te muevas... (comparando %d con %d) ", message.Message, Movement)
+
+	}
+
+}
+
+func EmpezaraJugarEtapa1() {
 
 }
 
@@ -93,7 +130,7 @@ func main() {
 		log.Printf("La sala esta llena")
 	} else {
 		log.Printf("Tu identificador es: %d", r.GetId())
-		EsperarLider(c, r.GetId())
+		EsperarLider(c, r)
 	}
 
 }
