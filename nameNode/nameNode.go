@@ -27,9 +27,24 @@ type NameNodeServer struct {
 	cliente3 pb.DataNameNodeServiceClient
 }
 
-func EnviarJugadaADataNode(cliente pb.DataNameNodeServiceClient, jugada *pb.JugadaToDataNode) (bool, error) {
+func EnviarJugadaADataNode(cliente pb.DataNameNodeServiceClient, jugada *pb.JugadaToDataNode, pos int) (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
+	path := "nameNode/distribucion.txt"
+	crearArchivo(path)
+	if pos == 0 {
+		texto := fmt.Sprintf("Jugador_%d_etapa_%d_%s", jugada.GetId(), jugada.GetEtapa(), address1)
+		escribeArchivo(path, texto)
+	}
+	if pos == 1 {
+		texto := fmt.Sprintf("Jugador_%d_etapa_%d_%s", jugada.GetId(), jugada.GetEtapa(), address2)
+		escribeArchivo(path, texto)
+	}
+	if pos == 2 {
+		texto := fmt.Sprintf("Jugador_%d_etapa_%d_%s", jugada.GetId(), jugada.GetEtapa(), address3)
+		escribeArchivo(path, texto)
+	}
+
 	r, err := cliente.RegistraJugada(ctx, jugada)
 	if err != nil {
 		log.Fatalf("could not greet: %v", err)
@@ -46,7 +61,6 @@ func crearArchivo(path string) {
 	var _, err = os.Stat(path)
 	//Crea el archivo si no existe
 	if os.IsNotExist(err) {
-		log.Printf("Hola")
 		var file, err = os.Create(path)
 		if existeError(err) {
 			return
@@ -56,7 +70,7 @@ func crearArchivo(path string) {
 	fmt.Println("File Created Successfully", path)
 }
 
-func escribeArchivo(path string, movimiento int) {
+func escribeArchivo(path string, texto string) {
 	// Abre archivo usando permisos READ & WRITE
 	var file, err = os.OpenFile(path, os.O_RDWR|os.O_APPEND, 0660)
 	if existeError(err) {
@@ -64,8 +78,7 @@ func escribeArchivo(path string, movimiento int) {
 	}
 	defer file.Close()
 	// Escribe algo de texto linea por linea
-	text := fmt.Sprintf("%d\n", movimiento)
-	_, err = file.WriteString(text)
+	_, err = file.WriteString(texto)
 	if existeError(err) {
 		return
 	}
@@ -87,9 +100,9 @@ func existeError(err error) bool {
 func (s *NameNodeServer) GuardarJugada(ctx context.Context, in *pb.JugadaToDataNode) (*pb.Response, error) {
 	clientes := make([]pb.DataNameNodeServiceClient, 0)
 	clientes = append(clientes, s.cliente1, s.cliente2, s.cliente3)
-
-	cliente := clientes[rand.Intn(len(clientes))]
-	resp, err := EnviarJugadaADataNode(cliente, in)
+	pos := rand.Intn(len(clientes))
+	cliente := clientes[pos]
+	resp, err := EnviarJugadaADataNode(cliente, in, pos-1)
 	// EnviarJugadaADataNode(cliente)
 	log.Printf("Received: %v", in.GetId())
 	respuesta := pb.Response{
