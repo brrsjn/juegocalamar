@@ -7,6 +7,8 @@ import (
 	"log"
 	"math/rand"
 	"net"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/streadway/amqp"
@@ -16,6 +18,16 @@ import (
 
 const (
 	port = ":50051"
+)
+
+//type pozoMonto struct{
+//	totalMonto int32
+//}
+
+var totalpozo int = 0
+
+const (
+	address = "localhost:50052"
 )
 
 type LiderServer struct {
@@ -36,6 +48,9 @@ type LiderServer struct {
 	CurrentRonda  int32
 	TriggerReady  bool
 	JugadasEtapas [3]jugadasRondas
+
+	// Cliente para guardar jugadas
+	NameNodeCliente pb.LiderNameNodeServiceClient
 }
 type jugadasRondas struct {
 	Etapa         int32
@@ -154,6 +169,14 @@ func (server *LiderServer) LuzRojaLuzVerde(req *pb.JugadaCliente, stream pb.Juga
 	}
 	server.JugadasEtapas[server.CurrentEtapa-1].jugadasRondas[server.CurrentRonda-1].jugadas[jugadaCl.idPlayer] = jugadaCl
 	server.JugadasEtapas[server.CurrentEtapa-1].jugadasRondas[server.CurrentRonda-1].jugadasHechas = server.JugadasEtapas[server.CurrentEtapa-1].jugadasRondas[server.CurrentRonda-1].jugadasHechas + 1
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	jugadaToNameNode := pb.JugadaToDataNode{
+		Id:         int32(jugadaCl.idPlayer),
+		Etapa:      1,
+		Movimiento: int32(jugadaCl.Movement),
+	}
+	server.NameNodeCliente.GuardarJugada(ctx, &jugadaToNameNode)
+	defer cancel()
 	log.Printf("Juegada recibida por jugador %d", &jugadaCl.idPlayer)
 
 	//Jugada de los Bots
@@ -259,17 +282,30 @@ func failOnError(err error, msg string) {
 	}
 }
 
-func crearJugadaBot(jugador *pb.Jugador, floor int, top int) jugada {
-	r1 := rand.Intn(top-floor) + floor
-	jugadaBot := jugada{
-		idPlayer:  int(jugador.GetId()),
-		playerObj: jugador,
-		Movement:  r1,
+func existeError(err error) bool {
+	if err != nil {
+		fmt.Println(err.Error())
 	}
-	return jugadaBot
+	return (err != nil)
 }
 
-func EnviarAPozoJugadorEliminado(id int32, etapa int32) {
+func crearArchivo() {
+	var path = "pozo/pozo.txt"
+
+	//Verifica que el archivo existe
+	var _, err = os.Stat(path)
+	//Crea el archivo si no existe
+	if os.IsNotExist(err) {
+		var file, err = os.Create(path)
+		if existeError(err) {
+			return
+		}
+		defer file.Close()
+	}
+	//fmt.Println("File Created Successfully", path)
+}
+
+func EnviarAPozoJugadorEliminado(id int, n_ronda int, monto int) {
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
@@ -288,7 +324,14 @@ func EnviarAPozoJugadorEliminado(id int32, etapa int32) {
 	)
 	failOnError(err, "Failed to declare a queue")
 
-	body := "Hello World!"
+	var id_jugador string
+	var id_ronda string
+	var id_monto string
+	id_jugador = strconv.Itoa(id)
+	id_ronda = strconv.Itoa(n_ronda)
+	id_monto = strconv.Itoa(monto) //el monto ya viene con el nuevo total
+
+	body := "Jugador_" + id_jugador + " Ronda_" + id_ronda + " " + id_monto
 	err = ch.Publish(
 		"",     // exchange
 		q.Name, // routing key
@@ -302,7 +345,31 @@ func EnviarAPozoJugadorEliminado(id int32, etapa int32) {
 	log.Printf(" [x] Sent %s", body)
 }
 
+func crearJugadaBot(jugador *pb.Jugador, floor int, top int) jugada {
+	r1 := rand.Intn(top-floor) + floor
+	jugadaBot := jugada{
+		idPlayer:  int(jugador.GetId()),
+		playerObj: jugador,
+		Movement:  r1,
+	}
+	return jugadaBot
+}
+
+func conexionANameNode() {
+
+}
+
 func main() {
+	// Set up a connection to the server.
+	conn, err := grpc.Dial(address, grpc.WithInsecure(), grpc.WithBlock())
+	if err != nil {
+		log.Fatalf("did not connect: %v", err)
+	}
+	defer conn.Close()
+	nameNode := pb.NewLiderNameNodeServiceClient(conn)
+
+	//totalpozo = totalpozo + 100000000
+	//EnviarAPozoJugadorEliminado(3, 2, totalpozo) //Ejemplo para enviar pozo a jugador eliminado
 	//EnviarAPozoJugadorEliminado(3, 2) //Ejemplo para enviar pozo a jugador eliminado
 
 	//Bienvenida e inicio del juego
@@ -312,7 +379,7 @@ func main() {
 	//reader := bufio.NewReader(os.Stdin)
 
 	var playersNo int
-	_, err := fmt.Scanf("%d", &playersNo)
+	fmt.Scanf("%d", &playersNo)
 	//if err != nil
 
 	lis, err := net.Listen("tcp", port)
@@ -328,6 +395,7 @@ func main() {
 		AlivePlayersCounter: 0,
 		CurrentEtapa:        1,
 		CurrentRonda:        1,
+		NameNodeCliente:     nameNode,
 	})
 	reflection.Register(s)
 

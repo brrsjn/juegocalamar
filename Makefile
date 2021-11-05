@@ -31,5 +31,5 @@ dataNode2:
 dataNode3:
 	go run nameNode/dataNode3/dataNode3.go
 
-nameNode:
+name_node:
 	go run nameNode/nameNode.go

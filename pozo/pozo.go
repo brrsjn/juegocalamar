@@ -1,10 +1,19 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"os"
 
 	amqp "github.com/streadway/amqp"
 )
+
+func existeError(err error) bool {
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	return (err != nil)
+}
 
 func failOnError(err error, msg string) {
 	if err != nil {
@@ -46,6 +55,27 @@ func main() {
 
 	go func() {
 		for d := range msgs {
+			var path = "client/pozo.txt"
+			var file, err = os.OpenFile(path, os.O_RDWR|os.O_APPEND, 0660)
+			var escr string
+			escr = string(d.Body)
+
+			if existeError(err) {
+				return
+			}
+			defer file.Close()
+			// Escribe algo de texto linea por linea
+			_, err = file.WriteString(escr + "\n")
+			if existeError(err) {
+				return
+			}
+
+			// Salva los cambios
+			err = file.Sync()
+			if existeError(err) {
+				return
+			}
+			fmt.Println("Archivo actualizado existosamente.")
 			log.Printf("Received a message: %s", d.Body)
 		}
 	}()
