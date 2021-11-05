@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"juegocalamar/pb"
 	"log"
+	"math/rand"
 	"net"
 	"time"
 
@@ -26,23 +27,31 @@ type LiderServer struct {
 	savedJugadores    [16]*pb.Jugador
 
 	//jugadores que han muerto
-	deadJugadores [16]*pb.Jugador
+	deadJugadores       [16]*pb.Jugador
+	AlivePlayersCounter int32
 
 	// info de las jugadas
-	EtapaNo       int32
+	CurrentEtapa  int32
+	CurrentRonda  int32
+	TriggerReady  bool
+	JugadasEtapas [3]jugadasRondas
+}
+type jugadasRondas struct {
+	Etapa         int32
 	ronda         int32
-	JugadasRondas [3]jugadas
+	jugadasRondas [3]jugadas
+	total         int
 }
 
 type jugadas struct {
-	Etapa   int
-	ronda   int
-	jugadas [16]jugada
-	total   int
+	jugadas       [16]jugada
+	jugadaLider   jugada
+	jugadasHechas int
 }
 type jugada struct {
-	idPlayer int
-	Movement int
+	idPlayer  int
+	playerObj *pb.Jugador
+	Movement  int
 }
 
 func viveJugador(lider int, jugador int) bool {
@@ -68,6 +77,7 @@ func (server *LiderServer) SolicitarUnirce(ctx context.Context, req *pb.Inscripc
 
 		server.savedJugadores[server.cantidadJugadores] = jugador
 		server.cantidadJugadores = server.cantidadJugadores + 1
+		server.AlivePlayersCounter = server.AlivePlayersCounter + 1
 		return jugador, nil
 	} else {
 		jugador := &pb.Jugador{
@@ -81,18 +91,21 @@ func (server *LiderServer) SolicitarUnirce(ctx context.Context, req *pb.Inscripc
 }
 
 func (server *LiderServer) IniciarEtapa(req *pb.SolicitarInicioJuego, stream pb.JugadorLiderService_IniciarEtapaServer) error {
+
 	for server.cantidadJugadores < server.TotalPlayers {
 		time.Sleep(1 * time.Second)
 	}
 	for server.cantidadJugadores < 15 {
 
 		server.cantidadJugadores = server.cantidadJugadores + 1
+		server.AlivePlayersCounter = server.AlivePlayersCounter + 1
 		jugador := &pb.Jugador{
 			Id:   server.cantidadJugadores,
 			Bot:  true,
 			Vive: true,
 		}
 		server.savedJugadores[server.cantidadJugadores] = jugador
+
 		log.Printf("New bot player %d", jugador.Id)
 	}
 	if err := stream.Send(&pb.EsperandoJugadores{
@@ -101,14 +114,101 @@ func (server *LiderServer) IniciarEtapa(req *pb.SolicitarInicioJuego, stream pb.
 	}); err != nil {
 		return err
 	}
+	///*
+	var Confirmacion string
+	for {
+		fmt.Printf("Iniciar Etapa1 [Y]/[N]: ")
+		_, err := fmt.Scanf("%s", &Confirmacion)
+		if err == nil {
+			break
+		}
+	}
+	if Confirmacion == "y" {
+		if err := stream.Send(&pb.EsperandoJugadores{
+			Message:      "Empezaremos a jugar",
+			Confirmacion: true,
+		}); err != nil {
+			return err
+		}
+		return nil
+	}
+	//*/
 	return nil
+
 }
 
 ///*
 func (server *LiderServer) LuzRojaLuzVerde(req *pb.JugadaCliente, stream pb.JugadorLiderService_LuzRojaLuzVerdeServer) error {
-	stream.SendMsg(&pb.JugadaLider{
-		Message: 2,
-	})
+	var r1 int
+	jugadaCl := jugada{
+		idPlayer:  int(req.GetId()),
+		playerObj: req.GetJugador(),
+		Movement:  int(req.GetMessage()),
+	}
+	server.JugadasEtapas[server.CurrentEtapa].jugadasRondas[server.CurrentRonda].jugadas[jugadaCl.idPlayer] = jugadaCl
+	server.JugadasEtapas[server.CurrentEtapa].jugadasRondas[server.CurrentRonda].jugadasHechas = server.JugadasEtapas[server.CurrentEtapa].jugadasRondas[server.CurrentRonda].jugadasHechas + 1
+	log.Printf("Juegada recibida por jugador %d", &jugadaCl.idPlayer)
+	if int(server.TotalPlayers) == server.JugadasEtapas[server.CurrentEtapa].jugadasRondas[server.CurrentRonda].jugadasHechas {
+		log.Println("juegan los bots")
+		for _, c := range server.savedJugadores {
+			if c != nil {
+				if c.Bot {
+					if c.Vive {
+						play := crearJugadaBot(c, 0, 10)
+						server.JugadasEtapas[server.CurrentEtapa].jugadasRondas[server.CurrentRonda].jugadas[play.idPlayer] = play
+						server.JugadasEtapas[server.CurrentEtapa].jugadasRondas[server.CurrentRonda].jugadasHechas = server.JugadasEtapas[server.CurrentEtapa].jugadasRondas[server.CurrentRonda].jugadasHechas + 1
+						log.Printf("Juegada recibida por Bot %d", &play.idPlayer)
+					}
+				}
+			}
+		}
+		log.Print(server.AlivePlayersCounter)
+		log.Print(server.JugadasEtapas[server.CurrentEtapa].jugadasRondas[server.CurrentRonda].jugadasHechas)
+	}
+	if int(server.AlivePlayersCounter) == server.JugadasEtapas[server.CurrentEtapa].jugadasRondas[server.CurrentRonda].jugadasHechas {
+		log.Println("Ahora juega el Lider")
+		r1 = rand.Intn(4) + 6
+		jugadaLid := jugada{
+			idPlayer: -1,
+			Movement: r1,
+		}
+		fmt.Print("Jugada del Lider: ")
+		fmt.Printf("%d", r1)
+		fmt.Println()
+		server.JugadasEtapas[server.CurrentEtapa].Etapa = server.CurrentEtapa
+		server.JugadasEtapas[server.CurrentEtapa].ronda = server.CurrentRonda
+		server.JugadasEtapas[server.CurrentEtapa].jugadasRondas[server.CurrentRonda].jugadaLider = jugadaLid
+		for _, c := range server.savedJugadores {
+			if c != nil {
+				if c.Vive {
+					id := c.GetId()
+					play := server.JugadasEtapas[server.CurrentEtapa].jugadasRondas[server.CurrentRonda].jugadas[id]
+					if play.Movement > r1-1 {
+						server.savedJugadores[c.Id].Vive = false
+						server.deadJugadores[c.Id] = c
+						fmt.Print("jugador Eliminado: ")
+						fmt.Printf("%d", c.Id)
+						fmt.Println()
+					}
+
+				}
+			}
+		}
+		if server.CurrentRonda < 3 {
+			stream.SendMsg(&pb.JugadaLider{
+				Message:    int32(r1),
+				ReadyEtapa: false,
+			})
+			server.CurrentRonda = server.CurrentRonda + 1
+		} else {
+			stream.SendMsg(&pb.JugadaLider{
+				Message:    int32(r1),
+				ReadyEtapa: true,
+			})
+			server.CurrentEtapa = server.CurrentEtapa + 1
+			server.CurrentRonda = 1
+		}
+	}
 
 	return nil
 }
@@ -117,6 +217,16 @@ func failOnError(err error, msg string) {
 	if err != nil {
 		log.Fatalf("%s: %s", msg, err)
 	}
+}
+
+func crearJugadaBot(jugador *pb.Jugador, floor int, top int) jugada {
+	r1 := rand.Intn(top-floor) + floor
+	jugadaBot := jugada{
+		idPlayer:  int(jugador.GetId()),
+		playerObj: jugador,
+		Movement:  r1,
+	}
+	return jugadaBot
 }
 
 func EnviarAPozoJugadorEliminado(id int32, etapa int32) {
@@ -153,7 +263,7 @@ func EnviarAPozoJugadorEliminado(id int32, etapa int32) {
 }
 
 func main() {
-	EnviarAPozoJugadorEliminado(3, 2) //Ejemplo para enviar pozo a jugador eliminado
+	//EnviarAPozoJugadorEliminado(3, 2) //Ejemplo para enviar pozo a jugador eliminado
 
 	//Bienvenida e inicio del juego
 	fmt.Println("___Bienvenido al juego del Calamardo___")
@@ -172,7 +282,13 @@ func main() {
 
 	s := grpc.NewServer()
 
-	pb.RegisterJugadorLiderServiceServer(s, &LiderServer{cantidadJugadores: 0, TotalPlayers: int32(playersNo)})
+	pb.RegisterJugadorLiderServiceServer(s, &LiderServer{
+		cantidadJugadores:   0,
+		TotalPlayers:        int32(playersNo),
+		AlivePlayersCounter: 0,
+		CurrentEtapa:        1,
+		CurrentRonda:        1,
+	})
 	reflection.Register(s)
 
 	log.Printf("server listening at %v", lis.Addr())

@@ -37,11 +37,11 @@ const (
 	defaultBot = true
 )
 
-type Jugada struct {
+/*type Jugada struct {
 	Jugador *pb.Jugador
 	mensaje string
 	etapa   int32
-}
+}*/
 
 func EsperarLider(client pb.JugadorLiderServiceClient, self *pb.Jugador) {
 
@@ -59,7 +59,7 @@ func EsperarLider(client pb.JugadorLiderServiceClient, self *pb.Jugador) {
 		if err != nil {
 			log.Fatalf("%v.ListFeatures(_) = _, %v", client, err)
 		}
-		log.Printf("%s", message.Message)
+		fmt.Printf("%s", message.Message)
 
 	}
 	log.Printf("Listos Para jugar")
@@ -74,6 +74,7 @@ func EnviarJugadaEtapa1(client pb.JugadorLiderServiceClient, self *pb.Jugador, e
 	fmt.Println("Jugaremos,Muevete luz verde")
 	var Movement int32
 	for {
+		fmt.Printf("pasos: ")
 		_, err := fmt.Scanf("%d", &Movement)
 		if err == nil {
 			fmt.Println("JUGADA HECHA")
@@ -81,7 +82,7 @@ func EnviarJugadaEtapa1(client pb.JugadorLiderServiceClient, self *pb.Jugador, e
 		}
 
 	}
-	stream, err := client.LuzRojaLuzVerde(context.Background(), &pb.JugadaCliente{Message: Movement})
+	stream, err := client.LuzRojaLuzVerde(context.Background(), &pb.JugadaCliente{Id: self.GetId(), Message: Movement})
 	if err != nil {
 		log.Fatalf("%v.ListFeatures(_) = _, %v", client, err)
 	}
