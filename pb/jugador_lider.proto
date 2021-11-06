@@ -6,6 +6,7 @@ message Jugador {
     int32 id = 1;
     bool bot = 2;
     bool vive = 3;
+    int32 SumaJugada1= 4;
 }
 
 message InscripcionJugador {
@@ -18,6 +19,7 @@ message SolicitarInicioJuego {
 
 message EsperandoJugadores {
     string message = 1;
+    bool confirmacion = 2;
 }
 
 message JugadaEtapa1 {
@@ -27,12 +29,23 @@ message JugadaEtapa1 {
 message Etapa {
     int32 id =1;
 }
+message jugadaCliente {
+    int32 id =1;
+    Jugador jugador=2;
+    int32 message = 3;
+}
+message jugadaLider {
+    int32 id =1;
+    int32 message = 2;
+    bool readyEtapa =3;
+}
 
 service JugadorLiderService {
     rpc SolicitarUnirce(InscripcionJugador) returns (Jugador) {};
 
     rpc IniciarEtapa(SolicitarInicioJuego) returns (stream EsperandoJugadores) {};
 
-    rpc Jugar(Etapa) returns (stream JugadaEtapa1) {};
-}
+    rpc LuzRojaLuzVerde(jugadaCliente) returns (stream jugadaLider) {};
 
+    rpc EstadoDelJugador(Jugador) returns (Jugador) {}
+}

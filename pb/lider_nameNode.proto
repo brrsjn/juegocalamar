@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+option go_package = "/pb";
+
+import "pb/data_nameNode.proto";
+
+service LiderNameNodeService {
+    rpc GuardarJugada (JugadaToDataNode) returns (Response) {};
+}

@@ -21,6 +21,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -36,15 +37,16 @@ const (
 	defaultBot = true
 )
 
-type Jugada struct {
+/*type Jugada struct {
 	Jugador *pb.Jugador
 	mensaje string
 	etapa   int32
-}
+}*/
 
-func EsperarLider(client pb.JugadorLiderServiceClient, id int32) {
+func EsperarLider(client pb.JugadorLiderServiceClient, self *pb.Jugador) {
+
 	stream, err := client.IniciarEtapa(context.TODO(), &pb.SolicitarInicioJuego{
-		Id: id,
+		Id: self.Id,
 	})
 	if err != nil {
 		log.Fatalf("%v.ListFeatures(_) = _, %v", client, err)
@@ -57,13 +59,75 @@ func EsperarLider(client pb.JugadorLiderServiceClient, id int32) {
 		if err != nil {
 			log.Fatalf("%v.ListFeatures(_) = _, %v", client, err)
 		}
-		log.Printf("%s", message.Message)
+		fmt.Printf("%s", message.Message)
+
 	}
 	log.Printf("Listos Para jugar")
+	EmpezaraJugarEtapa(client, self, 1)
+
 }
 
-func EnviarJugada(client pb.JugadorLiderServiceClient) {
+func EmpezaraJugarEtapa(client pb.JugadorLiderServiceClient, self *pb.Jugador, etapa int32) {
+	self = checkPlayerStatus(client, self)
+	if self.Vive {
+		if etapa == 1 {
+			EnviarJugadaEtapa1(client, self)
+		}
+		if etapa == 2 {
+			log.Print("Juego 2")
+			//EnviarJugadaEtapa1(client, self)
+		}
+		if etapa == 3 {
+			log.Print("Juego 3")
+			//EnviarJugadaEtapa1(client, self)
+		}
+	} else {
+		fmt.Println("El jugador ha sido eliminado")
+	}
+}
 
+func checkPlayerStatus(client pb.JugadorLiderServiceClient, self *pb.Jugador) *pb.Jugador {
+	self, _ = client.EstadoDelJugador(context.TODO(), self)
+	return self
+}
+
+func EnviarJugadaEtapa1(client pb.JugadorLiderServiceClient, self *pb.Jugador) {
+
+	//
+	//reader := bufio.NewReader(os.Stdin)
+	fmt.Println("Jugaremos,Muevete luz verde")
+	var Movement int32
+	for {
+		fmt.Printf("pasos: ")
+		_, err := fmt.Scanf("%d", &Movement)
+		if err == nil {
+			fmt.Println("JUGADA HECHA")
+			self.SumaJugada1 = self.SumaJugada1 + Movement
+			break
+		}
+
+	}
+	stream, err := client.LuzRojaLuzVerde(context.TODO(), &pb.JugadaCliente{Id: self.GetId(), Message: Movement})
+	if err != nil {
+		log.Fatalf("%v.ListFeatures(_) = _, %v", client, err)
+	}
+	var NextEtapa int
+	for {
+		message, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatalf("%v.ListFeatures(_) = _, %v", client, err)
+		}
+		log.Printf("No te muevas... (comparando %d con %d) ", message.Message, Movement)
+		if message.ReadyEtapa {
+			NextEtapa = 2
+		} else {
+			NextEtapa = 1
+		}
+	}
+	EmpezaraJugarEtapa(client, self, int32(NextEtapa))
 }
 
 func main() {
@@ -93,7 +157,7 @@ func main() {
 		log.Printf("La sala esta llena")
 	} else {
 		log.Printf("Tu identificador es: %d", r.GetId())
-		EsperarLider(c, r.GetId())
+		EsperarLider(c, r)
 	}
 
 }
