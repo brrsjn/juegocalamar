@@ -55,7 +55,7 @@ type LiderServer struct {
 type jugadasRondas struct {
 	Etapa         int32
 	ronda         int32
-	jugadasRondas [3]jugadas
+	jugadasRondas [4]jugadas
 	total         int
 }
 
@@ -236,7 +236,7 @@ func (server *LiderServer) LuzRojaLuzVerde(req *pb.JugadaCliente, stream pb.Juga
 				}
 			}
 		}
-		if server.CurrentRonda < 3 {
+		if server.CurrentRonda < 4 {
 			stream.SendMsg(&pb.JugadaLider{
 				Message:    int32(r1),
 				ReadyEtapa: false,
